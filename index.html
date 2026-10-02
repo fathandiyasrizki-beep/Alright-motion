@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG to XML Alight Motion Converter</title>
+    <!-- Tailwind CSS untuk styling -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-gray-950 text-white min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl max-w-md w-full">
+        <h1 class="text-xl font-bold mb-2 text-center">SVG Workbench Sederhana</h1>
+        <p class="text-xs text-gray-400 text-center mb-6">Konversi file SVG Anda menjadi format XML layer.</p>
+
+        <!-- Input File SVG -->
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-300 mb-2">Pilih File SVG</label>
+            <input type="file" id="svgFile" accept=".svg" class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-700 cursor-pointer"/>
+        </div>
+
+        <!-- Tombol Konversi -->
+        <button onclick="convertSvgToXml()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2.5 px-4 rounded-xl transition duration-200 shadow-lg shadow-purple-900/30">
+            Konversi ke XML
+        </button>
+
+        <!-- Informasi Output -->
+        <div id="outputStatus" class="mt-4 text-xs text-center text-gray-400"></div>
+    </div>
+
+    <script>
+        function convertSvgToXml() {
+            const fileInput = document.getElementById('svgFile');
+            const statusDiv = document.getElementById('outputStatus');
+
+            if (fileInput.files.length === 0) {
+                alert('Silakan pilih file SVG terlebih dahulu!');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const svgText = e.target.result;
+                
+                // Parse teks SVG menggunakan DOMParser
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(svgText, 'image/svg+xml');
+                const paths = doc.querySelectorAll('path');
+
+                if (paths.length === 0) {
+                    statusDiv.innerText = 'Tidak ditemukan elemen <path> di dalam file SVG ini.';
+                    return;
+                }
+
+                // Buat struktur XML tiruan untuk Alight Motion
+                let xmlContent = `<?xml version="1.0" encoding="utf-8"?>\n`;
+                xmlContent += `<alightcreative version="5.0">\n`;
+                xmlContent += `  <scene width="1024" height="1024" total_layers="${paths.length}">\n`;
+
+                paths.forEach((path, index) => {
+                    const d = path.getAttribute('d') || '';
+                    const fill = path.getAttribute('fill') || '#ffffff';
+                    xmlContent += `    <shape id="Shape_${index + 1}" fill="${fill}" d="${d}"/>\n`;
+                });
+
+                xmlContent += `  </scene>\n</alightcreative>`;
+
+                // Fitur Unduh Otomatis (Blob)
+                const blob = new Blob([xmlContent], { type: 'application/xml' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = file.name.replace('.svg', '-alight.xml');
+                a.click();
+
+                statusDiv.innerText = `Berhasil! ${paths.length} layer path dikonversi dan diunduh.`;
+            };
+
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>
