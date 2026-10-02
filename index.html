@@ -47,22 +47,34 @@
                 // Parse teks SVG menggunakan DOMParser
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(svgText, 'image/svg+xml');
-                const paths = doc.querySelectorAll('path');
+                
+                // Mendukung berbagai elemen vektor, tidak hanya <path>
+                const elements = doc.querySelectorAll('path, rect, circle, ellipse, polygon, polyline');
 
-                if (paths.length === 0) {
-                    statusDiv.innerText = 'Tidak ditemukan elemen <path> di dalam file SVG ini.';
+                if (elements.length === 0) {
+                    statusDiv.innerText = 'Tidak ditemukan elemen vektor di dalam file SVG ini.';
                     return;
                 }
 
                 // Buat struktur XML tiruan untuk Alight Motion
                 let xmlContent = `<?xml version="1.0" encoding="utf-8"?>\n`;
                 xmlContent += `<alightcreative version="5.0">\n`;
-                xmlContent += `  <scene width="1024" height="1024" total_layers="${paths.length}">\n`;
+                xmlContent += `  <scene width="1024" height="1024" total_layers="${elements.length}">\n`;
 
-                paths.forEach((path, index) => {
-                    const d = path.getAttribute('d') || '';
-                    const fill = path.getAttribute('fill') || '#ffffff';
-                    xmlContent += `    <shape id="Shape_${index + 1}" fill="${fill}" d="${d}"/>\n`;
+                elements.forEach((el, index) => {
+                    let d = el.getAttribute('d') || '';
+                    
+                    // Penanganan opsional jika elemen berupa <rect>
+                    if (!d && el.tagName.toLowerCase() === 'rect') {
+                        const x = el.getAttribute('x') || 0;
+                        const y = el.getAttribute('y') || 0;
+                        const width = el.getAttribute('width') || 0;
+                        const height = el.getAttribute('height') || 0;
+                        d = `M ${x} ${y} h ${width} v ${height} h -${width} Z`;
+                    }
+
+                    const fill = el.getAttribute('fill') || '#ffffff';
+                    xmlContent += `    <shape id="Shape_${index + 1}" type="${el.tagName}" fill="${fill}" d="${d}"/>\n`;
                 });
 
                 xmlContent += `  </scene>\n</alightcreative>`;
@@ -75,7 +87,7 @@
                 a.download = file.name.replace('.svg', '-alight.xml');
                 a.click();
 
-                statusDiv.innerText = `Berhasil! ${paths.length} layer path dikonversi dan diunduh.`;
+                statusDiv.innerText = `Berhasil! ${elements.length} layer vektor dikonversi dan diunduh.`;
             };
 
             reader.readAsText(file);
